@@ -184,7 +184,10 @@ To git@github.com:ZHyidao9999ji/nsd1930_1.git
  * [new branch]      master -> master
 分支 master 设置为跟踪来自 origin 的远程分支 master。
 
-
+后续上传文件:
+git add .
+git commit -m ""
+git push -u origin master
 
 
 
