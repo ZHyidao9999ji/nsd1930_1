@@ -91,37 +91,7 @@
 		]# yum install httpd
 		]# yum -y install httpd
 		yum remove 包名: 删除一个软件包
-	rpm : 查看包有没有装
-		rpm -qa 包名 : 
-				如果安装了，就显示完整包名
-		rpm -ql 包名：
-				安装这个包，产生的新的文件
-3.git 本地仓库，关联远程仓库
-	]# ssh-keygen -t rsa -C "xxx@qq.com"
-		overwrite> y
-	]# cd /root/.ssh/
-	]# cat id_rsa.pub
-		ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC/p8VCyHSZhf/kHb45b3XaPT7hKDU9YkFF/22b9VLawnCPTfX8MZ9CjTlIvharZSYRFCM+eANsD2dZTfIapnuAS9WK56ii+wMmzxCvzwYh6nllbrB0t/xQartgJkvT2nAkRUpgR7Tq2h55ErwosLcEZZC3Xq1spLjwBZ4FKlInEQ6Ly3xEZC+2CdGsv9DgpP/yakgMov7rU1uUv6xzGwVVwP5OV3QsDLLuzFZfE1LNJSjuBe1KiTzpokrfcsBR6CFNOoW6oOAipsT5vGHwdTjVqN92zNYLuOPIW3cFcDUQKIpeK7S0d6zC0nLL4HQrRf50UDWtOVgkDRL1KD3PeGGB xxx@qq.com
-	]# cd /opt
-	]# mkdir step01
-	]# cd step01/
-	]# rpm -qa git
-	]# git init
-	]# cat README.md
-		这是我云计算的第一个部分
-	]# git status
-	]# git add README.md
-	]# git commit -m "这是我的第一个文件"
-	]# git config --global user.name "MX-Steve"
-	]# git config --global user.email "xxx@qq.com"
-	]# git commit -m "这是我的第一个文件"
-	
-	]# git remote rename origin old-origin
-	]# git remote add origin git@github.com:MX-Steve/nsd1903_step01.git
-	]# git push -u origin master
-	
-		
-		
+
 		
 		
 		
