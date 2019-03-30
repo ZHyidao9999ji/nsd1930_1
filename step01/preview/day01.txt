@@ -1,0 +1,202 @@
+1.linux命令行介绍
+	ctrl + alt + fn 终端
+	ctrl + alt + f1 桌面
+	[ 用户@主机名 目录名 ]  #
+					     $
+	ls : 列出当前文件夹里的内容
+		-l : long 显示完整的格式：如大小/时间
+	touch : 创建文件 + 文件的名字
+	rm : 删除 + 文件的名字
+	
+	mkdir : 创建目录 + 目录的名字
+	rm    -r  : 删除目录 + 目录的名字 
+		  -f   : 删除文件或目录，不要提示
+	
+	cd : change directory切换目录
+		+  目录名
+		+   ..      返回到上一层目录
+		cd  : 回家,家目录
+	pwd :  查看当前在哪个文件夹[绝对位置]
+	cat : 查看一个文件
+
+	vim : 写  + 文件
+		i （插入） --> Esc  --> :q!   ==> quit  [不保存退出]
+		i  (插入)   --> Esc  --> :wq ==>write quit [保存退出]
+                                         :set nu  加行号
+                                         :set nonu 取消行号
+
+	目录：
+		/ : 根  
+			root : 管理员的家
+			home: 普通用户的家目录
+			...
+2.控制教学用虚拟机
+   格式：rht-vmctl   控制指令   虚拟机名
+  例如：rht-vmctl  reset  classroom  //重置资源服务器
+
+ ctrl+shift+t  快速开启一个新的终端
+
+  永久别名配置：vim  /root/.bashrc
+  #开启一个新的终端才会生效
+  例如：alias gos='ssh -X root@172.25.0.11'
+
+ wget下载工具
+  安装软件包—— rpm
+ rpm  -qa    若安装,则显示完整包名
+ rpm  -ql    查询已安装包产生的新文件
+ rpm  -ivh   安装软件包
+ rpm  -e     卸载软件包
+
+ yum软件包仓库
+  客户端
+  修改配置文件：vim  /etc/yum.repos.d/*.repo
+  [   ]           仓库标识
+ name=           仓库描述信息
+ baseurl=        服务端具体位置
+ enabled=        是否启用本文件
+ gpgcheck=       是否检测红帽签名信息
+
+ yum repolist             列出软件总数
+ yum list                 列出所有软件
+ yum  -y  install         安装软件包
+ yum remove               卸载软件包
+ yum clear all            清空yum缓存
+
+  配置网络
+ /etc:存放众多的系统配置文件
+
+  一、永久主机名配置文件  vim  /etc/hostname
+
+  二、永久配置ip地址 子网掩码 网关地址
+  网卡配置文件：/etc/sysconfig/network-scripts/ifcfg-eth0
+  通过命令nmcli进行配置
+  1.利用nmcli命令，进行查看网卡识别的名称
+ nmcli  connection  show
+
+  2.利用nmcli命令，进行配置
+ nmcli connection modify 'System eth0'
+ ipv4.method manual
+ ipv4.addresses '172.25.0.110/24  172.25.0.254'
+ connection.autoconnect yes
+--------------------------------------------
+ nmcli connection 修改 '网卡名称'
+ ipv4.方法 手工配置
+ ipv4.地址'ip地址/子网掩码 网关地址'
+  每次开机自动启用配置
+
+  3.激活配置
+ nmcli connection up 'System eth0'
+
+   三、DNS服务器地址
+ DNS服务器地址配置文件的路径： /etc/resolv.conf
+  告知本机解析域名，去寻找那台机器
+ vim /etc/resolv.conf(指定永久DNS服务器)
+ nameserver 172.25.254.254
+  测试DNS解析的命令
+ nslookup   域名
+
+  网络参数配置顺序：
+  首先配置主机名，然后配置ip地址 子网掩码 网关地址，最后指定永久DNS服务>器
+
+  查看网关地址命令：route
+  网关—— Gateway
+
+
+git 本地仓库，关联远程仓库:
+[root@nsd1903 ~]# ssh-keygen -t rsa -C "1141273758@qq.com"
+Generating public/private rsa key pair.
+Enter file in which to save the key (/root/.ssh/id_rsa): 
+/root/.ssh/id_rsa already exists.
+Overwrite (y/n)? y
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /root/.ssh/id_rsa.
+Your public key has been saved in /root/.ssh/id_rsa.pub.
+The key fingerprint is:
+SHA256:SX912N8R7y8t2NOQUrpB4WmRHFij4w/U0/GsMTKDABA 1141273758@qq.com
+The key's randomart image is:
++---[RSA 2048]----+
+|    Eo...  +*o.. |
+|         ..=o* *o|
+|        . = @ B.*|
+|       . = + O B+|
+|        S + = + +|
+|           + * +.|
+|            + = +|
+|               + |
+|                 |
++----[SHA256]-----+
+[root@nsd1903 ~]# ls -a
+.                .config          .gnupg           .PyCharm2017.3   .win
+..               .cshrc           .gvfs            PycharmProjects  .Xauthority
+anaconda-ks.cfg  .dbus            .ICEauthority    .python_history  公共
+.bash_history    debian-binary    .java            .redhat          模板
+.bash_logout     .desktop.xml     .kingsoft        .server.xml      视频
+.bash_profile    .esd_auth        .lesshst         .sogouinput      图片
+.bashrc          .freerdp         .local           .ssh             文档
+bin              .gitconfig       .mozilla         .stardict        下载
+.cache           .gnome2          original-ks.cfg  .tcshrc          音乐
+.classroom.xml   .gnome2_private  .pki             .viminfo         桌面
+[root@nsd1903 ~]# cd .ssh
+[root@nsd1903 .ssh]# ls
+authorized_keys  id_rsa  id_rsa.pub  known_hosts
+[root@nsd1903 .ssh]# cat id_rsa.pub 
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCrfbbDjzVm/3ibee+5HdL5Na2rjT8Wq+gAPJjD5JobjWXsJ5skTX7ZJdfvVU7f0/2rt+q+fQyQEkt0TV1Cp2FbbFNOQqPKar/PeYQ/gLrEz+ECeEh5KBFz/QrxyRpLu3egmeBFTlZhvxdW8jCZ6QXZacAJqgGA2gqpBG0AUl9g1QU6i9QbWde3I+nhJ9cLpYdzih9/Izitbg908B0ySZj9JBWER7B1vbqiCDYBwz2AOBYj0bCNVblqi5rIbSzKrxgN/F2spPTjOU2haavun7iQn4nzzMa92HWFB2gQqrFbrBfS0rnz2GmCmemgEPwYmilOflGNDRt869V4cNwpF+1N 1141273758@qq.com
+[root@nsd1903 .ssh]# git init
+初始化空的 Git 版本库于 /root/.ssh/.git/
+[root@nsd1903 opt]# cd /mnt
+[root@nsd1903 mnt]# git init
+初始化空的 Git 版本库于 /mnt/.git/
+[root@nsd1903 mnt]# vim README.md
+[root@nsd1903 mnt]# git status
+# 位于分支 master
+#
+# 初始提交
+#
+# 未跟踪的文件:
+#   （使用 "git add <file>..." 以包含要提交的内容）
+#
+#	README.md
+提交为空，但是存在尚未跟踪的文件（使用 "git add" 建立跟踪）
+[root@nsd1903 mnt]# git add README.md
+[root@nsd1903 mnt]# git status
+# 位于分支 master
+#
+# 初始提交
+#
+# 要提交的变更：
+#   （使用 "git rm --cached <file>..." 撤出暂存区）
+#
+#	新文件：    README.md
+#
+[root@nsd1903 mnt]# git commit -m ".."
+[master（根提交） d2e3068] ..
+ 1 file changed, 1 insertion(+)
+ create mode 100644 README.md
+[root@nsd1903 mnt]# git config --global user.name "ZHyidao9999ji"
+[root@nsd1903 mnt]# git config --global user.email "1141273758@qq.com"
+[root@nsd1903 mnt]# git remote add origin git@github.com:ZHyidao9999ji/nsd1930_1.git
+[root@nsd1903 mnt]# git push -u origin master
+Counting objects: 3, done.
+Writing objects: 100% (3/3), 217 bytes | 0 bytes/s, done.
+Total 3 (delta 0), reused 0 (delta 0)
+To git@github.com:ZHyidao9999ji/nsd1930_1.git
+ * [new branch]      master -> master
+分支 master 设置为跟踪来自 origin 的远程分支 master。
+
+后续上传文件:
+git add .
+git commit -m ""
+git push -u origin master
+
+
+
+
+
+
+
+	
+
+
+
+
