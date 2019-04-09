@@ -91,7 +91,7 @@ acl策略的作用
 – setfacl  -m u:用户名:权限类别 文档...
 – setfacl  -m g:组名:权限类别 文档...
 – setfacl  -b 文档...               #删除所有ACL策略
-– setfacl  -m u:用户名:---    文档...      #删除单条指定ACL策略
+– setfacl  -x u:用户名 文档...      #删除单条指定ACL策略
 
 　　　[-R]：递归设置ACL策略
 
