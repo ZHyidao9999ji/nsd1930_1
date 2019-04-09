@@ -136,8 +136,8 @@ acl策略的作用
 [root@server0 ~]# mkdir -p /data/test
 [root@server0 ~]# chmod o=--- /data/test/
 	2、递归修改文件夹/data/test的归属使所有者为zhangsan，所属组为tarena。
-[root@server0 ~]# chown -R zhangsan /data/test/
-[root@server0 ~]# chown -R tarena /data/test/
+[root@server0 ~]# chown -R zhangsan /data
+[root@server0 ~]# chown -R :tarena /data
 	3、请实现在test目录下，新建的所有子文件或目录的所属组都会是tarena。
 [root@server0 ~]# chown :tarena /data/test/
 [root@server0 ~]# chmod g+s /data/test/
