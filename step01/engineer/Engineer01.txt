@@ -409,6 +409,21 @@ for循环结构:解决反复执行重复性的操作
 3)当没有任何参数或者参数不是 redhat 或者fedora时,
 其错误输出产生以下信息: /root/foo.sh redhat|fedora
 
+
+#!/bin/bash
+if [ $# -eq 0 ];then
+  echo '/root/foo.sh redhat|fedora' >&2  #输出变成错误输出
+  exit 2　　                            　#程序退出返回值
+elif  [ $1 == redhat  ];then
+  echo fedora
+elif [ $1 == fedora ];then
+  echo redhat   
+else 
+  echo '/root/foo.sh redhat|fedora' >&2　#输出变成错误输出
+  exit 1　                               #程序退出返回值
+fi
+
+
 ####################################################
 
 案例5:编写一个批量添加用户脚本
@@ -421,51 +436,24 @@ for循环结构:解决反复执行重复性的操作
 4)新用户的登录Shell为 /bin/false,无需设置密码
 5)用户列表测试文件:
 http://classroom/pub/materials/userlist
+
+
+#!/bin/bash
+if [ $# -eq 0 ];then
+  echo 'sage: /root/batchusers' >&2
+  exit 1
+elif [ -f $1 ];then
+  for user in `cat $1`
+  do
+   useradd -s /bin/false $user  &> /dev/null
+   echo $user创建成功
+  done
+else
+  echo 'Input file not found' >&2
+  exit 2
+fi
+~                   
 ###################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
