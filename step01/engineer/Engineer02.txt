@@ -201,15 +201,15 @@ Linux的防火墙体系
 ]# ping -c 2 172.25.0.11   #可以通信
 
 在区域中添加允许访问的服务或协议
-             http:超文本传输协议
-             https:安全超文本传输协议
-             DNS:域名解析协议
-             FTP:文件传输协议
-             TFTP:简单文件传输协议
-             telnet:远程管理协议
-             pop3:邮件协议(用户收邮件协议)
-             SMTP:邮件协议(用户发邮件协议)
-             SNMP:简单的网络管理协议
+             http:超文本传输协议     默认端口:80
+             https:安全超文本传输协议　默认端口:443
+             DNS:域名解析协议　默认端口:53
+             FTP:文件传输协议　默认端口:21
+             TFTP:简单文件传输协议　默认端口:
+             telnet:远程管理协议　默认端口:
+             pop3:邮件协议(用户收邮件协议)　默认端口:
+             SMTP:邮件协议(用户发邮件协议)    默认端口:
+             SNMP:简单的网络管理协议    默认端口:
 虚拟机server:  
 # firewall-cmd --zone=public --list-all  #查看区域规则
 # firewall-cmd --zone=public --add-service=http #添加协议
