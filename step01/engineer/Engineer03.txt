@@ -1,240 +1,283 @@
-教学环境介绍
+iSCSI服务基础
 
-– 格式:rht-vmctl 控制指令 虚拟机名
+iSCSI磁盘的工作模式(默认端口:3260)
+• Internet SCSI,网际SCSI接口
+– 一种基于C/S架构的虚拟磁盘技术
+– 服务器提供磁盘空间,客户机连接并当成本地磁盘使用
 
-reset(还原)
+• backstore,后端存储
+– 对应到服务端提供实际存储空间的设备,需要起一个管理名称
 
-真机上操作：
-　]# rht-vmctl reset classroom　 //先重置资源服务器
-　]# rht-vmctl reset server
-　]# rht-vmctl reset desktop　　 //再重置练习虚拟机
+• target,磁盘组(木质的箱子)
+– 是客户端的访问目标,作为一个框架,由多个lun组成
 
+• lun,逻辑单元(将后端存储放入磁盘组)
+– 每一个lun需要关联到某一个后端存储设备,在客户端
+会视为一块虚拟硬盘
 
+   /dev/vdb1 (backstore,后端存储)
+  
+      大冰箱---->纸质的包装      木质的箱子
 
+• ISCSI Qualified Name(iqn) 名称规范
+– iqn.yyyy-mm.倒序域名:自定义标识
+– 用来识别 target 磁盘组,也用来识别客户机身份
 
+• 名称示例
+– iqn.2016-02.com.example:server0
+– iqn.2016-02.com.example:desktop0
 
-####################################################
-防火墙策略管理
 
-一  虚拟机server搭建基本Web服务
-1.安装httpd软件包
-[root@server0 ~]# yum -y install httpd
-2.重启httpd服务
-[root@server0 ~]# systemctl restart httpd
-3.在虚拟机server书写一个页面文件
-      默认存放网页文件的路径: /var/www/html
-      默认页面文件名称:index.html
+服务端:虚拟机server 提供磁盘空间
 
-]# echo '<h1>NSD1903' > /var/www/html/index.html
+一 所需软件包:targetcli(服务端软件)
+[root@server0 ~]# yum -y install targetcli
 
+二 运行targetcli进行配置
+[root@server0 ~]# targetcli
 
-[root@server0 ~]# firefox 172.25.0.11
+ 1)创建后端存储(backstore,后端存储)
+   /> backstores/block  create  name=nsd dev=/dev/vdb1
 
+ 2)创建target,磁盘组(木质的箱子)
+[root@server0 ~]# targetcli
+   /> iscsi/ create iqn.2019-04.com.example:server0
 
-#################################################
-防火墙策略
-      作用:隔离
+ 3)配置lun,关联(将后端存储放入磁盘组)
+   /> iscsi/iqn.2019-04.com.example:server0/tpg1/luns     create /backstores/block/nsd 
 
-    硬件防火墙
-    软件防火墙
-    
-firewalld服务基础
+  4)配置ACL访问控制,设置客户端声称的名字
+/> iscsi/iqn.2019-04.com.example:server0/tpg1/acls create iqn.2019-04.com.example:desktop0
 
-Linux的防火墙体系
- • 系统服务:firewalld
- • 管理工具:firewall-cmd、firewall-config
+  5)设置本机提供服务端的IP地址与端口
+ /> iscsi/iqn.2019-04.com.example:server0/tpg1/portals create   172.25.0.11
 
+   /> exit   #保存并退出
 
-预设安全区域
-• 根据所在的网络场所区分,预设保护规则集
-– public:仅允许访问本机的sshd  ping  dhcpd服务
-– trusted:允许任何访问
-– block:阻塞任何来访请求(明确拒绝,客户端有接收回应)
-– drop:丢弃任何来访的数据包(直接丢弃,客户端没有接收回应) 节省服务器资源
 
+客户端:虚拟机desktop 访问使用服务端提供磁盘空间
+一 安装客户端软件
+• 所需软件包:iscsi-initiator-utils
+[root@desktop0 ~]# yum -y install  iscs(tab)
 
- 数据包: 目标IP地址   源IP地址   数据
+二 修改配置文件,指定客户端生成的命令
+[root@desktop0 ~]# vim /etc/iscsi/initiatorname.iscsi 
+InitiatorName=iqn.2019-04.com.example:desktop0
 
-防火墙判定的规则:匹配及停止
-1.查看请求数据包中源IP地址,然后查询防火墙所有区域,那个区域有该IP地址的规则,则进入该区域
+三 重启iscsid服务,用于识别客户端声称的名字
+[root@desktop0 ~]# systemctl restart iscsid
+  Warning: Unit file of iscsid.service changed on  
+  disk, 'systemctl daemon-reload' recommended.
+[root@desktop0 ~]# systemctl daemon-reload
+[root@desktop0 ~]# systemctl restart iscsid
 
-2.进入默认区域public(由root指定)
+四  运行iscsiadm命令,发现服务端共享存储
+  Linux查看命令帮助的方法 :  man  iscsiadm 
+   全文查找/example   按n项下跳转匹配,看到EXAMPLES
 
-###############################################
-在区域中添加允许访问的服务或协议
+]# iscsiadm --mode discoverydb --type sendtargets --portal 172.25.0.11 --discover
 
-            http:超文本传输协议  默认端口:80
-            https:安全超文本传输协议  默认端口:443
-            DNS:域名解析协议 默认端口:53
-            FTP:文件传输协议 默认端口:21
-            TFTP:简单文件传输协议  默认端口:69
-            telnet:远程管理协议  默认端口:23
-            pop3:邮件协议(用户收邮件协议)  默认端口:110
-            SMTP:邮件协议(用户发邮件协议)  默认端口:25
-            SNMP:简单的网络管理协议 默认端口:161
+屏幕显示信息:
+172.25.0.11:3260,1 iqn.2019-04.com.example:server0
+
+五 重启iscsi服务(客户端服务),加载服务端共享存储
+
+[root@desktop0 ~]# systemctl restart iscsi
+[root@desktop0 ~]# systemctl enable iscsi
+[root@desktop0 ~]# lsblk 
 
-
-
-
-虚拟机server:  
-# firewall-cmd --zone=public --list-all  #查看区域规则
-# firewall-cmd --permanent --zone=public --add-service=http  #添加协议
-
-# firewall-cmd --zone=public --list-all
-# firewall-cmd --reload   #重新加载防火墙所有策略
-# firewall-cmd --zone=public --list-all  #查看区域规则
-虚拟机desktop
-# firefox 172.25.0.11    #可以访问
-
-####################################################
-补充:
-  单独拒绝虚拟机desktop访问虚拟机server所有请求
-虚拟机server
-]# firewall-cmd --zone=block --add-source=172.25.0.10
-]# firewall-cmd --zone=block --list-all 
-
-虚拟机desktop 访问测试 
-]#  ping  172.25.0.11 #不可以访问
-]#  firefox  172.25.0.11  #不可以访问
-真机  访问测试
-]#  ping  172.25.0.11 #可以访问
-]#  firefox  172.25.0.11  #可以访问
-####################################################
-  端口: 编号 标识服务或协议或程序
-          可以利用root用户修改 服务或协议或程序的端口
-
-
-实现本机的端口映射
-• 本地应用的端口重定向(端口1 --> 端口2)                    
-– 从客户机访问 端口1 的请求,自动映射到本机 端口2
-– 比如,访问以下两个地址可以看到相同的页面:
-客户端访问是:172.25.0.11 5423 ----->防火墙----->172.25.0.11 80
-
-虚拟机server
-]# firewall-cmd --permanent --zone=public 
---add-forward-port=port=5423:proto=tcp:toport=80
-
-]# firewall-cmd --reload  //重载配置
-]# firewall-cmd --zone=public --list-all 
-
-虚拟机desktop
-]# firefox 172.25.0.11:5423    #访问时加上端口
-###################################################
-
-
-#####################################################
-触发挂载
-1.关闭虚拟机server,添加光驱设备,将光盘放入
-
-2.安装autofs可以实现触发挂载软件
-[root@server0 ~]# yum -y install autofs
-3.重启autofs服务
-[root@server0 ~]# systemctl restart autofs
-[root@server0 ~]# systemctl enable autofs
-4.进行触发挂载
-[root@server0 ~]# ls /misc
-[root@server0 ~]# ls /misc/cd
-
-#################################################
-]# ls /etc/auto.master  #触发挂载的主配置文件
-]# ls /etc/auto.misc    #挂载配置文件
-
- 触发挂载必须为二层目录结构
-
-  /nsd/第一层称之为监控点,必须有管理员亲自创建
-
-监控点由/etc/auto.master设置
-[root@server0 /]# vim /etc/auto.master  
- /misc   /etc/auto.misc
- /nsd    /etc/test
-
- 监控点      指定挂在配置文件的路径
-翻译:
-设置监控点为/misc,要想知道挂载什么设备,请看/etc/auto.misc文件
-
-[root@server0 /]# fdisk /dev/vdb
-[root@server0 /]# mkfs.xfs /dev/vdb1
-[root@server0 /]# vim /etc/test 
-abc      -fstype=xfs,rw      :/dev/vdb1
-挂载点      文件系统类型及参数           挂载设备
-
-[root@server0 /]# systemctl restart autofs
-[root@server0 /]# cd /nsd/abc
-
-###############################################
-添加一个 swap分区(交换分区)
-   作用:在一定程度上,缓解内存不足
-   相当于虚拟内存
-
-  Linux一般使用分区空间,来充当交换空间
-
-[root@server0 ~]# fdisk /dev/vdb   #划分一个512M的分区
-[root@server0 ~]# mkswap /dev/vdb1  #格式化交换文件系统
-[root@server0 ~]# blkid /dev/vdb1  #查看文件系统类型
-
-[root@server0 ~]# swapon -s   #查看交换空间组成  成员信息
-[root@server0 ~]# swapon /dev/vdb1   #启用 
-[root@server0 ~]# swapon -s   #查看交换空间组成  成员信息
-[root@server0 ~]# swapoff /dev/vdb1   #停用 
-
-[root@server0 ~]# vim   /etc/fstab 
-/dev/vdb1   swap   swap   defaults  0  0
-                                                                                
-[root@serverX ~]# swapon  -a     //检测/etc/fstab交换分区，书写正确会进行启用
-[root@serverX ~]# swapon  -s     //查看交换分区启用情况
- 
-###################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+###############################################################################################
+
+一 部署mariadb数据库服务器(默认的端口 3306)
+   mariadb-server:提供服务端有关的系统程序
+
+[root@server0 ~]# yum -y install mariadb-server
+[root@server0 ~]# systemctl restart mariadb
+
+二 数据库的基本操作
+[root@server0 ~]# mysql        #进入数据库,默认无需密码
+1.
+show 查看 
+create　创建
+drop　删除
+
+2.设置用户密码
+mysqladmin -u 用户  -p　旧密码　 password '密码'　
+登陆
+mysql -u 用户　-p　　　
+mysql -u 用户　-p密码
+
+3.进入库
+use 库名
+查看库中表格
+show tables
+查看表结构
+desc 表名
+
+4.数据库授权
+grant  权限列表　on 数据库名.表名　to　用户名＠客户机地址   identified by　＇密码＇;
+
+5.数据库的导入操作
+• 导入/恢复到数据库
+]# wget http://classroom.example.com/pub/materials/users.sql
+]# ls
+导入数据到指定数据库:
+]# mysql -u root -p123 nsd1903 < /root/users.sql 
+
+有多少人的姓名是 Barbara 同时居住在 Sunnyvale?
+> select count(*) from base,location         
+  where base.name='Barbara' and 
+  location.city='Sunnyvale' and base.id=location.id; 
+
+> insert base values('6','Barbara','789'); #插入表记录
+
+
+
+##############################################################
+案例练习,准备:
+            rht-vmctl  reset  classroom
+            rht-vmctl  reset  server
+	        rht-vmctl  reset  desktop
+######################################################
+
+
+案例1:在在 server0、desktop0 上操作
+– 将防火墙默认区域设置为trusted
+[root@server0 ~]# firewall-cmd --set-default-zone=trusted
+success
+[root@server0 ~]# firewall-cmd --get-default-zone
+trusted
+
+案例2:指定yum软件源
+为 server0 指定可用的 yum 软件源
+– YUM软件库的地址为 http://classroom.example.com/content/rhel7.0/x86_64/dvd
+– 将此配置为虚拟机 server0 的默认软件仓库
+– 确认可用的仓库列表
+– 利用yum仓库安装system-config-kickstart 
+[root@server0 ~]# rm -rf /etc/yum.repos.d/*
+[root@server0 ~]# vim /etc/yum.repos.d/dvd.repo
+[root@server0 ~]# yum repolist
+[root@server0 ~]# yum -y install system-config-kickstart
+
+
+案例3:tar制作/释放归档压缩包（zcf、ztf、zxf、jcf、jtf、jxf、cf、tf）
+  首先创建/root/boothome/与/root/usrsbin/目录
+    1）备份/boot、/home这两个文件夹，保存为boothome.tar.gz文件
+    2）查看boothome.tar.gz文件内包含哪些内容 
+    3）将boothome.tar.gz释放到文件夹/root/boothome/下
+    4）备份/usr/sbin目录，保存为usrsbin.tar.bz2文件
+    5）查看usrsbin.tar.bz2文件内包含哪些内容
+    6）将usrsbin.tar.bz2释放到/root/usrsbin/文件夹下
+[root@server0 ~]# mkdir /root/boothome /root/usrsbin
+[root@server0 ~]# tar -zcf /root/boothome.tar.gz /boot/ /home/
+[root@server0 ~]# tar -tf /root/boothome.tar.gz
+[root@server0 ~]# tar -xf /root/boothome.tar.gz  -C /root/boothome
+[root@server0 ~]# tar -jcf /root/usrsbin.tar.bz2  /usr/sbin/
+[root@server0 ~]# tar -tf /root/usrsbin.tar.bz2 
+[root@server0 ~]# tar -xf /root/usrsbin.tar.bz2 -C /root/usrsbin
+
+案例4:在server上操作，搭建mariadb数据库系统
+1. 在 server0 上安装 MariaDB 数据库系统
+1)安装 mariadb-server软件包
+2)启动 mariadb 服务
+[root@server0 ~]# yum -y install mariadb-server
+[root@server0 ~]# systemctl restart mariadb
+
+
+案例5:在server上操作，配置一个数据库
+– 为mariadb数据库root设置登陆密码为 haxi
+– 新建一个数据库名为 nsd
+– 除了 root 用户,此数据库只能被用户 lisi 查询,此用户的密码为 123(用户的授权)
+– 数据库 nsd 中应该包含来自数据库复制的内容,(数据库导入数据)
+数据库文件的 URL为:http://classroom/pub/materials/users.sql
+[root@server0 ~]# mysqladmin -u root password 'haxi';
+[root@server0 ~]# mysql -u root -phaxi;
+MariaDB [(none)]> create database nsd;
+MariaDB [(none)]> exit
+[root@server0 ~]# wget http://classroom/pub/materials/users.sql
+[root@server0 ~]# mysql -u root -phaxi nsd < /root/users.sql 
+MariaDB [nsd]> grant select on nsd.* to lisi@localhost identified by '123';
+
+案例6:在server上操作，使用数据库查询
+
+1)查询base表所有内容
+2)查询location表所有内容
+3)查询base表的结构
+4)查询location表的结构
+5)查询base表内容,只显示name字段
+6)查询mysql表内容,只显示user,host,password字段
+7)密码是 solicitous 的人的名字?
+8)有多少人的姓名是 Barbara 同时居住在 Sunnyvale?
+9)在base表中追加记录  id为6，name为Barbara，password为900
+10)在location表中追加记录  id为6，city为Sunnyvale
+11)再次查询有多少人的姓名是 Barbara 同时居住在 Sunnyvale?
+MariaDB [nsd]> show tables;
+MariaDB [nsd]> select * from base;
+MariaDB [nsd]> select * from location;
+MariaDB [nsd]> desc base;
+MariaDB [nsd]> desc location;
+MariaDB [nsd]> select name from base;
+MariaDB [nsd]> select name from base where password='solicitous';
+MariaDB [nsd]> select count(*) from base,location where base.name='barbara' and location.city='sunnyvale' and base.id=location.id;    1
+MariaDB [nsd]> insert base values('6','barbara','900');
+MariaDB [nsd]> insert location values('6','sunnyvale');
+MariaDB [nsd]> select count(*) from base,location where base.name='barbara' and location.city='sunnyvale' and base.id=location.id;     2
+
+案例7:虚拟机 server0操作， /dev/vdb 上按以下要求建立分区：
+
+采用默认的 msdos 分区模式 
+– 第1个分区 /dev/vdb1 的大小为 3G
+– 第2个分区 /dev/vdb2 的大小为 200M
+– 第3个分区 /dev/vdb3 的大小为 100M
+– 第4个分区 /dev/vdb4为扩展分区
+– 在划分三个分区逻辑分区/dev/vdb[5-6]，
+– 分区大小依次为500M、2000M
+[root@server0 ~]# fdisk /dev/vdb
+[root@server0 ~]# partprobe
+[root@server0 ~]# lsblk
+NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+vda    253:0    0   10G  0 disk 
+└─vda1 253:1    0   10G  0 part /
+vdb    253:16   0   10G  0 disk 
+├─vdb1 253:17   0    3G  0 part 
+├─vdb2 253:18   0  200M  0 part 
+├─vdb3 253:19   0  100M  0 part 
+├─vdb4 253:20   0    1K  0 part 
+├─vdb5 253:21   0  500M  0 part 
+└─vdb6 253:22   0    2G  0 part 
+
+案例8：发布iSCSI网络磁盘
+
+ 1）配置 server0 提供 iSCSI 服务，要求如下：
+ 2）磁盘名为iqn.2016-02.com.example:server0
+ 3）服务端口为 3260
+ 4）使用 iscsi_store（后端存储的名称） 作其后端卷，其大小为 3GiB
+ 5）此磁盘服务只能被 desktop0.example.com 访问，在Server0上配置客户端ACL为iqn.2016-02.com.example:desktop0
+ 6）配置虚拟机desktop0 使用 虚拟机server0 提供 iSCSI 服务
+[root@server0 ~]# firewall-cmd --set-default-zone=trusted
+[root@server0 ~]# yum -y install targetcli
+[root@server0 ~]# targetcli
+/> /backstores/block  create name=iscsi_store dev=/dev/vdb1
+/> iscsi/ create iqn.2016-02.com.example:server0
+/> iscsi/iqn.2016-02.com.example:server0/tpg1/luns  create /backstores/block/iscsi_store
+/> iscsi/iqn.2016-02.com.example:server0/tpg1/acls  create iqn.2016-02.com.example:desktop0
+/> iscsi/iqn.2016-02.com.example:server0/tpg1/portals  create 172.25.0.11
+/> exit
+[root@server0 ~]# systemctl  restart  target
+[root@server0 ~]# systemctl  enable  target
+[root@desktop0 ~]# yum -y install iscsi-initiator-utils
+[root@desktop0 ~]# vim /etc/iscsi/initiatorname.iscsi 
+[root@desktop0 ~]# systemctl restart  iscsid
+[root@desktop0 ~]# man iscsiadm
+[root@desktop0 ~]# iscsiadm --mode discoverydb --type sendtargets --portal 172.25.0.11 --discover
+[root@desktop0 ~]# systemctl  restart  iscsi
+[root@desktop0 ~]# systemctl  enable  iscsi
+[root@desktop0 ~]# lsblk
+NAME   MAJ:MIN RM SIZE RO TYPE MOUNTPOINT
+sda      8:0    0   3G  0 disk 
+vda    253:0    0  10G  0 disk 
+└─vda1 253:1    0  10G  0 part /
+vdb    253:16   0  10G  0 disk 
 
 
 
