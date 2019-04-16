@@ -1,0 +1,206 @@
+NFS网络文件系统：为客户及提供共享使用的文件夹
+协议：NFS(TCP/UDP 2049)   RPC(TCP/UDP 111)
+1.安装所需软件包：nfs-utils
+系统服务：nfs-server
+2.创建共享目录
+3.修改配置文件/etc/exports
+/public  *(ro)
+[root@server0 ~]# systemctl  restart  nfs-server
+[root@server0 ~]# systemctl  enable  nfs-server
+4.desktop端查看server端共享路径
+[root@desktop0 ~]# showmount -e 172.25.0.11
+5.挂载访问
+[root@desktop0 ~]# mkdir /mnt/nfs
+[root@desktop0 ~]# mount 172.25.0.11:/public /mnt/nfs
+[root@desktop0 ~]# df -h
+6.开机自动挂载/etc/fstab
+172.25.0.11:/public /mnt/nfs nfs defaults,_netdev 0  0
+[root@desktop0 ~]# mount -a
+[root@desktop0 ~]# df -ah
+############################################################
+HTTP服务
+WEB通信基于B/S架构的网页服务
+-服务端提供网页
+-浏览器下载并显示网页
+DocumentRoot:网页根目录(/var/www/html)
+主配置文件/etc/httpd/conf/httpd.conf
+[root@server0 ~]# mkdir /var/www/myweb
+[root@server0 ~]# echo '<h1>wwwwwwww' >  /var/www/myweb/index.html
+[root@server0 ~]# vim /etc/httpd/conf/httpd.conf 
+DocumentRoot "/var/www/myweb"
+[root@server0 ~]# systemctl restart  httpd
+[root@server0 ~]# firefox 172.25.0.11
+
+
+
+Web虚拟主机：
+虚拟主机三种分类
+基于域名、端口、IP地址
+
+配置文件/etc/httpd/conf.d/*.conf
+<VirtualHost IP地址:端口>
+  ServerName  DNS名称
+  DocumentRoot　网页根目录
+</VirtualHost>
+
+[root@server0 ~]# vim /etc/httpd/conf.d/nsd01.conf
+<VirtualHost *:80>
+  ServerName server0.example.com
+  DocumentRoot /var/www/qq
+</VirtualHost>
+<VirtualHost *:80>
+  ServerName www0.example.com
+  DocumentRoot /var/www/baidu
+</VirtualHost>
+[root@server0 ~]# mkdir /var/www/qq  /var/www/baidu
+[root@server0 ~]# echo '<h1>百度' > /var/www/baidu/index.html
+[root@server0 ~]# echo '<h1>QQ' > /var/www/qq/index.html
+[root@server0 ~]# systemctl  restart  httpd
+
+[root@desktop0 ~]# firefox www0.example.com
+[root@desktop0 ~]# firefox server0.example.com
+
+
+
+
+#################################################################
+补充: Samba共享服务 (Windows平台与Linux平台   跨平台的共享)
+      协议:smb(沟通验证身份)   cifs(存储或传输数据)
+
+默认情况下必须通用户验证,才可以访问
+专门用于Samba共享服务,验证的用户:Samba共享帐号
+1.必须要有相应的本地用户对应           
+2.采用独立的密码设置             
+                                     
+虚拟机server:     
+1.安装软件包samba
+[root@server0 ~]# yum -y install samba
+
+2.创建Samba共享帐号
+]# useradd -s /sbin/nologin harry
+]# pdbedit -a harry      #将用户添加为Samba共享帐号
+new password:
+retype new password:
+
+   pdbedit -x 用户名     #删除Samba共享帐号
+   pdbedit -L  #查看当前系统,所有的Samba共享帐号
+
+3.修改配置文件
+[root@server0 ~]# vim /etc/samba/smb.conf 
+在命令模式下,输入G(大写)到全文的最后一行
+
+[nsd]                #设置共享名
+path = /common       #设置实际共享的目录
+
+[root@server0 ~]# mkdir /common
+[root@server0 ~]# echo 123 > /common/123.txt
+[root@server0 ~]# ls /common/
+
+4.重启smb服务
+[root@server0 ~]# systemctl restart smb
+
+5.修改SELinux策略,布尔值策略(功能的开关)
+ samba_export_all_ro : Samba服务只读共享功能
+
+]# getenforce   #查看SELinux状态
+]# getsebool -a | grep samba   #查看SELinux所有布尔值
+
+]# setsebool samba_export_all_ro  on  #修改SELinux布尔值
+
+]# getsebool -a | grep samba
+]# getenforce 
+
+
+虚拟机desktop:
+1.安装软件包,支持Samba共享的挂载,让本机识别cifs协议
+]# yum -y install cifs-utils
+]# rpm -q  cifs-utils
+
+2.挂载访问Samba共享
+]# mkdir /mnt/smb
+]# mount -o user=harry,pass=123  //172.25.0.11/nsd   /mnt/smb/
+
+格式:
+mount -o user=用户名,pass=密码  //服务端IP地址/共享名   挂载点
+
+]# df -h
+
+3.开机自动挂载,书写/etc/fstab      
+
+//172.25.0.11/nsd /mnt/smb  cifs defaults,_netdev,user=harry,pass=123 0 0
+
+[root@desktop0 ~]# umount /mnt/smb/
+[root@desktop0 ~]# mount -a
+[root@desktop0 ~]# df -h
+
+###########################################################################
+案例1：实现的防火墙配置
+  1）修改虚拟机 server0防火墙配置，将默认区域修改为trusted
+  2）修改虚拟机 desktop0防火墙配置，将默认区域修改为trusted
+[root@desktop0 ~]# firewall-cmd --set-default-zone=trusted
+[root@server0 ~]# firewall-cmd --set-default-zone=trusted
+
+案例2:配置nfs文件夹共享，防火墙默认区域设置为trusted
+  在 server0 上发布共享文件夹
+  1）搭建nfs共享，实现共享本机/public
+  2）共享给所有人可以访问，并且具备只读权限
+[root@server0 ~]# mkdir /public
+[root@server0 ~]# vim /etc/exports
+/public  *(ro)
+[root@server0 ~]# systemctl  restart  nfs-server
+[root@server0 ~]# systemctl  enable  nfs-server
+
+  在 desktop0 上访问共享文件夹
+  1）访问 server0 上发布共享/public,
+  2）实现开机自动挂载到/mnt/test
+[root@desktop0 ~]# showmount -e 172.25.0.11
+Export list for 172.25.0.11:
+/public *
+[root@desktop0 ~]# mkdir /mnt/test
+[root@desktop0 ~]# mount 172.25.0.11:/public /mnt/test/
+[root@desktop0 ~]# df -h
+[root@desktop0 ~]# vim /etc/fstab 
+172.25.0.11:/public /mnt/test nfs defaults,_netdev 0  0
+[root@desktop0 ~]# mount -a
+[root@desktop0 ~]# df -ah
+
+案例3:为虚拟机 server 配置以下虚拟Web主机
+- 实现三个网站的部署
+- 实现客户端访问server0.example.com网页内容为 卖女孩的小火柴
+- 实现客户端访问www0.example.com网页内容为  奔跑吧骆驼
+- 实现客户端访问webapp0.example.com网页内容为 20里春风不如你
+[root@server0 ~]# yum -y install httpd
+[root@server0 ~]# vim /etc/httpd/conf.d/nsd01.conf
+<VirtualHost *:80>
+  ServerName server0.example.com 
+  DocumentRoot /var/www/mhc
+</VirtualHost>
+<VirtualHost *:80>
+  ServerName www0.example.com 
+  DocumentRoot /var/www/bpb
+</VirtualHost>
+<VirtualHost *:80>
+  ServerName webapp0.example.com 
+  DocumentRoot /var/www/20lc
+</VirtualHost>
+[root@server0 ~]# echo '<h1>卖火柴的小女孩'　> /var/www/mhc/index.html
+[root@server0 ~]# echo '<h1>奔跑吧骆驼'　> /var/www/bpb/index.html
+[root@server0 ~]# echo '<h1>20里春风不如你'　> /var/www/20lc/index.html
+[root@server0 ~]# systemctl  restart  httpd
+[root@desktop0 ~]# firefox server0.example.com
+[root@desktop0 ~]# firefox www0.example.com
+[root@desktop0 ~]# firefox webapp0.example.com
+
+
+
+
+案例4(了解):配置Samba文件夹共享，防火墙默认区域设置为trusted，修改SElinux状态为Enforcing
+  在 server0 上发布共享文件夹
+  1）发布目录 /nb，共享名为 niu
+  2）用户 kenji 对共享 niu 可读，密码是 123
+
+ 在 desktop0 上访问共享文件夹
+  1）访问 server0 上发布共享文件夹,实现开机自动挂载到/mnt/nsd
+  2）实现对/mnt/nsd目录可以读
+ 
+
