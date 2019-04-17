@@ -1,0 +1,156 @@
+案例1:配置网页内容访问
+在 Web 网站 http://server0.example.com 的          
+DocumentRoot 目录下创建一个名为 private 的子目录
+要求如下:
+1.虚拟机server,查看DocumentRoot 目录路径
+]# cat /etc/httpd/conf.d/nsd.conf 
+
+]# mkdir /var/www/web1/private
+
+]# echo 'private' > /var/www/web1/private/index.html
+
+2.虚拟机desktop访问测试
+]# firefox  server0.example.com/private
+
+3.从虚拟机server0上,任何人都可以浏览 private的内容,
+但是从其他系统不能访问这个目录的内容
+[root@server0 ~]# cat /etc/httpd/conf.d/nsd1.conf
+  <Directory  /var/www/web1/private>
+	Require  ip  172.25.0.11   #仅允许172.25.0.11访问
+  </Directory>
+
+[root@server0 ~]# systemctl restart httpd
+
+在虚拟机desktop测试: firefox server0.example.com/private
+Forbidden
+
+You don't have permission to access /private/ on this server.
+
+####################################################
+案例2:使用自定Web根目录
+调整 Web 站点 http://server0.example.com 的网页目录,要求如下:
+1)新建目录 /webroot,作为此站点新的网页目录
+]# mkdir /webroot
+]# echo ' webroot' > /webroot/index.html
+]# vim /etc/httpd/conf.d/nsd.conf 
+ ......
+<VirtualHost *:80>
+  ServerName server0.example.com
+  DocumentRoot /webroot
+</Virtualhost>
+ ......
+]# vim /etc/httpd/conf.d/nsd1.conf 
+.......
+<Directory /webroot>
+    Require all granted    #允许所有人进行访问
+</Directory>
+[root@server0 ~]# systemctl restart httpd
+
+2)修改SELinux策略,安全上下文(标签)    
+
+[root@server0 ~]# ls -Zd /var/www/  #查看目录SELinux标签值
+[root@server0 ~]# ls -Zd /webroot/
+
+• 方式1:参照标准目录,重设新目录的属性
+– chcon [-R] --reference=模板目录 新目录
+
+[root@server0 ~]# chcon -R --reference=/var/www /webroot
+[root@server0 ~]# ls -Zd /webroot
+
+[root@server0 ~]# firefox server0.example.com
+
+#####################################################
+一、部署动态网站
+　静态网站：服务端的原始网页＝浏览器访问到的网页		
+　动态网站：
+　部署python动态网页，为站点webapp0.example.com
+1.server下载页面
+[root@server0 ~]# cat /etc/httpd/conf.d/nsd.con
+[root@server0 ~]# cd /var/www/web03
+[root@server0 web03]# wget http://classroom.example.com/pub/materials/webinfo.wsgi
+
+2.实现客户端方便访问，设置页面跳转
+[root@server0 web03]# vim /etc/httpd/conf.d/nsd.conf 
+<virtualhost *:80>
+servername webapp0.example.com
+documentroot /var/www/web03　　　　　　　　　　　　　　　　　　
+alias /  /var/www/web03/webinfo.wsgi　　　　　　
+＃alias　 网络路径　　实际路径
+＃网络路径为　/  :  用户直接输入域名
+</virtualhost>
+[root@server0 web03]# systemctl restart httpd
+
+3.修改配文件，添加翻译配置
+[root@server0 ~]# yum -y install mod_wsgi
+[root@server0 ~]# vim /etc/httpd/conf.d/nsd.conf
+<virtualhost *:80>
+servername webapp0.example.com
+documentroot /var/www/web03
+wsgiscriptalias 　/ 　/var/www/web03/webinfo.wsgi
+</virtualhost>
+[root@server0 ~]# systemctl  restart  httpd
+
+4.虚拟主机侦听在端口8909
+[root@server0 ~]# vim /etc/httpd/conf.d/nsd.conf
+listen 8909            #httpd监听8909端口
+<virtualhost *:8909>　　#设置虚拟web主机的端口
+servername webapp0.example.com
+documentroot /var/www/web03
+wsgiscriptalias / /var/www/web03/webinfo.wsgi
+</virtualhost>
+
+5.修改Selinux策略，非默认端口开放的策略
+[root@server0 ~]# semanage port -l | grep http
+[root@server0 ~]# semanage port -a -t http_port_t  -p tcp 8909
+                     -p:协议   　 -t:类型        -a:添加
+[root@server0 ~]# semanage port -l | grep http
+[root@server0 ~]# systemctl  restart  httpd
+[root@desktop0 ~]# firefox 172.25.0.11:8909
+[root@desktop0 ~]# firefox 172.25.0.11
+
+###################################################################
+二、安全web服务
+1.部署网站证书
+[root@server0 ~]# cd /etc/pki/tls/certs/
+[root@server0 certs]# wget http://classroom.example.com/pub/tls/certs/server0.crt
+
+2.部署根证书
+[root@server0 certs]# wget http://classroom.example.com/pub/example-ca.crt
+
+3.部署用于解密数据的秘钥
+[root@server0 certs]# cd /etc/pki/tls/private/
+[root@server0 private]# wget http://classroom.example.com/pub/tls/private/server0.key
+
+4.安装mod_ssl软件，实现加密web传输
+[root@server0 /]# yum -y install mod_ssl
+
+5.修改配置文件/etc/httpd/conf.d/ssl.conf
+[root@server0 /]# vim /etc/httpd/conf.d/ssl.conf
+ 59 DocumentRoot "/var/www/web01"
+ 60 ServerName www0.example.com:443
+100 SSLCertificateFile /etc/pki/tls/certs/server0.crt
+107 SSLCertificateKeyFile /etc/pki/tls/private/server0.key
+122 SSLCACertificateFile /etc/pki/tls/certs/example-ca.crt
+[root@server0 /]# systemctl  restart  httpd
+
+[root@desktop0 ~]# firefox https://www0.example.com
+
+#指定网站证书
+100 SSLCertificateFile /etc/pki/tls/certs/server0.crt
+
+#指定秘钥
+107 SSLCertificateKeyFile /etc/pki/tls/private/server0.key
+
+#指定根证书
+122 SSLCACertificateFile /etc/pki/tls/certs/example-ca.crt
+[root@server0 /]# systemctl restart httpd
+
+
+
+
+
+
+
+
+
+

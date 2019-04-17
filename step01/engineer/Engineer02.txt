@@ -19,6 +19,7 @@
  else
   echo '/root/foo.sh redhat|fedora' >&2 #输出变成错误输出
   exit 39     #程序退出返回值
+
  fi
  
 [root@server0 ~]# /root/foo.sh tc  

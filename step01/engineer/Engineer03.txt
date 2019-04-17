@@ -40,7 +40,6 @@ iSCSI磁盘的工作模式(默认端口:3260)
    /> backstores/block  create  name=nsd dev=/dev/vdb1
 
  2)创建target,磁盘组(木质的箱子)
-[root@server0 ~]# targetcli
    /> iscsi/ create iqn.2019-04.com.example:server0
 
  3)配置lun,关联(将后端存储放入磁盘组)
