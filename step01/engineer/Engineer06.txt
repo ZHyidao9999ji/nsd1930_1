@@ -1,0 +1,108 @@
+一、基本邮件服务
+1.配置文件/etc/postfix/main.cf
+[root@server0 ~]# vim /etc/postfix/main.cf 
+99 myorigin = server0.example.com　　＃默认补全邮箱账号后缀
+116 inet_interfaces = all　　＃所有网卡都提供邮件服务
+164 mydestination = server0.example.com　＃判断为本域邮件依据
+[root@server0 ~]# systemctl  restart  postfix
+2.mail命令
+格式：　mail -s  '邮件标题'　　-r  发件人    收件人[@收件域]　
+e.g.
+[root@server0 ~]# useradd  lnx
+[root@server0 ~]# useradd  yinzhiping
+[root@server0 ~]# mail -s 'test1' -r yinzhiping lnx 
+fsafasfsd
+.
+EOT
+[root@server0 ~]# echo hhhhh | mail -s 'test2' -r yinzhiping lnx 
+[root@server0 ~]# mail -u lnx
+Heirloom Mail version 12.5 7/5/10.  Type ? for help.
+"/var/mail/lnx": 2 messages 2 new
+>N  1 yinzhiping@server0.e  Thu Apr 18 10:32  18/599   "test1"
+ N  2 yinzhiping@server0.e  Thu Apr 18 10:32  18/595   "test2"
+& 1
+Message  1:
+From yinzhiping@server0.example.com  Thu Apr 18 10:32:27 2019
+Return-Path: <yinzhiping@server0.example.com>
+X-Original-To: lnx
+Delivered-To: lnx@server0.example.com
+Date: Thu, 18 Apr 2019 10:32:27 +0800
+From: yinzhiping@server0.example.com
+To: lnx@server0.example.com
+Subject: test1
+User-Agent: Heirloom mailx 12.5 7/5/10
+Content-Type: text/plain; charset=us-ascii
+Status: R
+
+fsafasfsd
+
+
+二、parted分区工具(划分GPT分区模式)
+parted /dev/vdb
+(parted)mktable gpt:指定硬盘分区模式　　#初始化磁盘,不能重复执行
+(parted) mkpart     # 划分新区                                                      
+分区名称？  []? zy                                                        
+文件系统类型？  [ext2]? xfs                                               
+起始点？ 0                                                                
+结束点？ 3G
+忽略/Ignore/放弃/Cancel? Ignore                                           
+(parted) unit  GB  
+(parted) print
+Model: Virtio Block Device (virtblk)
+Disk /dev/vdb: 10.7GB
+Sector size (logical/physical): 512B/512B
+Partition Table: gpt
+Disk Flags: 
+
+Number  Start   End     Size    File system  Name  标志
+ 1      0.00GB  3.00GB  3.00GB               zy
+(parted) rm   #删除分区                                                            
+分区编号？ １
+(parted) quit  #退出 
+
+
+三、IPv6
+配置IPv6地址2003:ac18::305
+[root@server0 ~]# nmcli connection modify 'System eth0' ipv6.method manual ipv6.addresses 2003:ac18::305/64 connection.autoconnect yes
+[root@server0 ~]# nmcli connection up 'System eth0'
+
+
+四、聚合链接
+1.创建虚拟网卡team0
+[root@desktop0 ~]# nmcli  connection add type team con-name team0 ifname team0 autoconnect yes config '{"runner":{"name":"activebackup"}}'
+
+nmcli connection delete team0  #敲错删除重来
+
+2.添加成员
+[root@desktop0 ~]# nmcli connection add type team-slave con-name team0_1 ifname eth1 master team0 
+[root@desktop0 ~]# nmcli connection add type team-slave con-name team0_2 ifname eth2 master team0 
+[root@desktop0 ~]# ls /etc/sysconfig/network-scripts #产看生成的配置文件
+
+3.配置IP地址
+[root@desktop0 ~]# nmcli connection modify team0 ipv4.method manual ipv4.addresses  192.168.1.1/24 connection.autoconnect yes
+[root@desktop0 ~]# nmcli connection up team0
+
+[root@desktop0 ~]# teamdctl team0 state　　　　＃查看team0信息
+[root@desktop0 ~]# ifconfig eth2 down         #禁用eth2网卡
+[root@desktop0 ~]# teamdctl team0 state
+[root@desktop0 ~]# ifconfig eth2 up           #激活eth2网卡
+[root@desktop0 ~]# teamdctl team0 state
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
