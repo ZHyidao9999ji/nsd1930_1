@@ -1,0 +1,72 @@
+新教学环境的搭建
+1.构建两台虚拟机：服务端和客户端　用jio本　clone-vm7
+2.直接管理虚拟机无需IP地址　　　virsh consle 
+3.配置IP地址主机名：　　
+A:192.168.4.7/24     svr7.tedu.cn
+B:192.168.4.207/24   pc207.tedu.cn
+C:192.168.4.10/24    C.tedu.cn   
+D:192.168.4.20/24    D.tedu.cn 
+为虚拟机搭建yum仓库
+1.服务端构建web或ftp服务，共享光盘内容
+2.创建在/var/ftp/centos-1804
+3.开机自动挂载
+4.客户端修改配置文件/etc/yum.repos.d/
+
+常见一级目录
+/boot 　存放系统引导必须文件　内核、启动配置
+/bin、/bash 存放各种命令程序
+/ect  存放系统及程序的配置文件
+/tmp　　存放日志、邮件目录等经常变化的文件
+/proc　存放内存中的映射数据，不占用磁盘
+/var　　存放系统运行过程中使用的一些临时文件
+
+权限　
+r:4  w:２　x:1
+SUID:4  SGID:2  Sticky Bit:1
+
+du 统计文件的占用空间　　-sh 
+
+制作快捷方式：
+1.软连接：ln -s  /路径/软文件或目录　　　/路径/快捷方式
+2.硬连接：ln  /路径/软文件　　　/路径/快捷方式      只能在同一分区或文件系统中
+
+zip归档工具
+zip -r  备份文件.zip  源文档...　
+unzip 备份文件.zip  -d 释放路径
+
+
+
+自定义yum仓库
+1.真机：具备从互联网下载的软件包
+
+2.将真机的tools.tar.gz包，上传到虚拟机A的/root目录下scp依赖于ssh,scp=ssh+cp
+scp 　本地源文件　　root@对方IP地址:/路径
+
+3.tar解包
+[root@svr7 ~]# tar -xf /root/tools.tar.gz  -C /
+
+4.仓库数据文件
+[root@svr7 ~]# yum -y install createrepo
+[root@svr7 ~]# createrepo /tools/other/
+
+5.修改配置文件
+[root@svr7 ~]# vim /etc/yum.repos.d/local.repo 
+[other]
+name=mine mine
+baseurl=file:///tools/other    #file://表示本机为服务端
+enabled=1
+gpgcheck=0
+[root@svr7 ~]# yum repolist
+
+
+vim末行模式
+:r 路径　＃读取文件
+ :s /old/new        #替换当前行的第一个＂old＂
+ :s /old/new/g      #替换当前行所有的＂old＂
+ :n,m s/old/new/g  #替换第n到m行所有的＂old＂
+ :% s/old/new/g    #替换所有的＂old＂
+
+
+
+             
+
