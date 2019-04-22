@@ -1,0 +1,59 @@
+启动基本服务
+[root@zhenji ~]# yum  -y  install  qemu-kvm libvirt-daemon  libvirt-client libvirt-daemon-driver-qemu  virt-manager
+[root@zhenji ~]# systemctl  restart  libvirtd
+[root@zhenji ~]# systemctl  enable  libvirtd
+
+创建新虚拟机
+[root@zhenji ~]# cd /var/lib/libvirt/images/
+[root@zhenji images]# cp nsd01.qcow2  nsd03.qcow2   　　　
+[root@zhenji images]# mkdir /xmlfile
+[root@zhenji /]# virsh dumpxml nsd01   >  /xmlfile/nsd03.xml  #导出配置文件
+[root@zhenji images]# vim /xmlfile/nsd03.xml 
+  <name>nsd03</name>  #修改虚拟机名称
+  <uuid>2b7e8bbf-f12d-4345-a37e-38b131fd4364</uuid>　　#整行删除
+  <source file='/var/lib/libvirt/images/nsd03.qcow2'/>　#修改文件路径
+  <mac address='52:54:00:ba:08:76'/>　　#整行删除
+[root@zhenji images]# virsh define /xmlfile/nsd03.xml   #导入配置文件
+[root@zhenji images]# virsh list --all
+
+---整合命令：virsh edit
+[root@zhenji images]# cp nsd01.qcow2 nsd04.qcow2
+[root@zhenji images]# virsh edit nsd01
+  <name>nsd04</name>  #修改虚拟机名称
+  <uuid>2b7e8bbf-f12d-4345-a37e-38b131fd4364</uuid>　　#整行删除
+  <source file='/var/lib/libvirt/images/nsd04.qcow2'/>　#修改文件路径
+  <mac address='52:54:00:ba:08:76'/>　　#整行删除
+[root@zhenji images]# virsh list --all
+virsh destroy  #强制关机
+virsh undefine #删除虚拟机
+virt-manager
+virsh nodeinfo  :查看KVM节点(服务器)信息
+virsh list [--all]  :列出虚拟机
+virsh net-list [--all]  :列出虚拟网络
+virsh dominfo 虚拟机名称   :查看指定虚拟机的信息
+virsh autostart    #将虚拟机设置为开机自启
+
+
+
+COW技术
+qemu-img info 文件路径     
+快速构建前端盘
+1.以虚拟机nsd01为原始盘,构建abc01前端盘
+qemu-img  create  -f qcow2 -b   后端盘  前端盘  大小
+[root@zhenji ~]# qemu-img create -f qcow2 -b /var/lib/libvirt/images/nsd01.qcow2 /var/lib/libvirt/images/abc01.qcow2   10G
+[root@zhenji ~]# qemu-img info /var/lib/libvirt/images/abc01.qcow2 
+2.以前端盘abc01.qcow2 创建新虚拟机abc01
+[root@zhenji ~]# virsh edit nsd01
+[root@zhenji ~]# virsh start abc01
+
+
+离线访问guestmount (关闭selinux)
+guestmount -a 虚拟磁盘路径   -i  挂载点
+[root@zhenji ~]# mkdir  -p  /MNT/disk
+[root@zhenji ~]# guestmount -a /opt/nb.qcow2  -i /MNT/disk/
+[root@zhenji ~]# ls /MNT/disk/
+
+####################################################################
+LANG=en  growpart /dev/vda  1
+xfs_growfs  /dev/vda1
+

@@ -1,6 +1,6 @@
 新教学环境的搭建
 1.构建两台虚拟机：服务端和客户端　用jio本　clone-vm7
-2.直接管理虚拟机无需IP地址　　　virsh consle 
+2.直接管理虚拟机无需IP地址　　　virsh console 
 3.配置IP地址主机名：　　
 A:192.168.4.7/24     svr7.tedu.cn
 B:192.168.4.207/24   pc207.tedu.cn
@@ -47,7 +47,7 @@ scp 　本地源文件　　root@对方IP地址:/路径
 
 4.仓库数据文件
 [root@svr7 ~]# yum -y install createrepo
-[root@svr7 ~]# createrepo /tools/other/
+[root@svr7 ~]# createrepo /tools/other/       ＊ createrepo --update 路径　　#刷新仓库，显示新添软件包
 
 5.修改配置文件
 [root@svr7 ~]# vim /etc/yum.repos.d/local.repo 
