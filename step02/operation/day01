@@ -1,0 +1,93 @@
+一、构建Nginx服务器
+[root@proxy ~]# yum -y install gcc pcre-devel openssl-devel       
+[root@proxy ~]# useradd -s /sbin/nologin nginx
+[root@proxy ~]# tar  -xf   nginx-1.10.3.tar.gz
+[root@proxy ~]# cd  nginx-1.10.3
+[root@proxy nginx-1.10.3]# ./configure  --user=nginx  --group=nginx  --with-http_ssl_module  
+[root@proxy nginx-1.10.3]# make && make install 
+[root@proxy ~]# /usr/local/nginx/sbin/nginx    //启动服务
+[root@proxy ~]# ln -s /usr/local/nginx/sbin/nginx /sbin/   //创建快捷方式
+
+补充: [root@proxy ~]# /usr/local/nginx/sbin/nginx -s stop            //关闭服务
+    [root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload        //重新加载配置文件
+    [root@proxy ~]# /usr/local/nginx/sbin/nginx -V                //查看软件信息
+
+
+二、升级Nginx服务器
+[root@proxy ~]# tar  -zxvf   nginx-1.12.2.tar.gz
+[root@proxy ~]# cd nginx-1.12.2 
+root@proxy nginx-1.12.2]# ./configure --user=nginx --group=nginx  --with-http_ssl_module
+[root@proxy nginx-1.12.2]# make
+[root@proxy nginx-1.12.2]# mv /usr/local/nginx/sbin/nginx  /usr/local/nginx/sbin/nginxold
+[root@proxy nginx-1.12.2]# cp objs/nginx  /usr/local/nginx/sbin/         //拷贝新版本
+[root@proxy nginx-1.12.2]# make upgrade                            //升级
+#或者使用killall nginx杀死进程后再启动nginx。
+[root@client ~]# firefox http://192.168.4.5
+
+
+三、用户认证
+[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
+.. ..
+server {
+        listen       80;
+        server_name  localhost;
+        auth_basic "Input Password:";                        //认证提示符信息
+        auth_basic_user_file "/usr/local/nginx/pass";        //认证的密码文件
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+  }
+[root@proxy ~]# yum -y install  httpd-tools
+[root@proxy ~]# htpasswd -c /usr/local/nginx/pass   tom        //创建密码文件
+New password: 
+Re-type new password: 
+Adding password for user tom
+[root@proxy ~]# htpasswd  /usr/local/nginx/pass   jerry      //追加用户，不使用-c选项
+New password: 
+Re-type new password: 
+Adding password for user jerry
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload    //重新加载配置文件 
+[root@client ~]# firefox http://192.168.4.5                    //输入密码后可以访问
+
+四、基于域名的虚拟主机
+[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
+    … …
+        server {
+            listen  80;                                        //端口
+            server_name  www.b.com;                                //域名
+    location / { 
+    root   www;                                 //指定网站根路径
+    index  index.html index.htm;
+      }
+    }
+[root@proxy ~]# mkdir /usr/local/nginx/www
+[root@proxy ~]# echo "www" > /usr/local/nginx/www/index.html
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload
+[root@client ~]# vim /etc/hosts
+192.168.4.5    www.a.com  www.b.com
+
+五、ssl虚拟主机
+[root@proxy ~]# cd /usr/local/nginx/conf
+[root@proxy ~]# openssl genrsa > cert.key                            //生成私钥
+[root@proxy ~]# openssl req -new -x509 -key cert.key > cert.pem      //生成证书
+[root@proxy ~]# vim  /usr/local/nginx/conf/nginx.conf
+    … …    
+    server {
+            listen       443 ssl;
+            server_name            www.c.com;
+            ssl_certificate      cert.pem;         #这里是证书文件
+            ssl_certificate_key  cert.key;         #这里是私钥文件
+            ssl_session_cache    shared:SSL:1m;
+            ssl_session_timeout  5m;
+            ssl_ciphers  HIGH:!aNULL:!MD5;
+            ssl_prefer_server_ciphers  on;
+            location / {
+                root   html;
+                index  index.html index.htm;
+            }
+        }
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload
+[root@client ~]# vim /etc/hosts
+    192.168.4.5    www.c.com  www.a.com   www.b.com
+

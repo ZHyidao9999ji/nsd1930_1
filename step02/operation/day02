@@ -1,0 +1,97 @@
+一、部署LNMP
+安装部署Nginx、MariaDB、PHP环境
+yum需要安装的软件列表如下：
+nginx
+mariadb、mariadb-server、mariadb-devel
+php、php-fpm、php-mysql
+[root@proxy ~]# /usr/local/nginx/sbin/nginx         //启动nginx
+[root@proxy ~]# systemctl start  mariadb           //启动服务器
+[root@proxy ~]# systemctl enable mariadb           //设置开机启动
+[root@proxy ~]# systemctl start php-fpm           //启动服务
+[root@proxy ~]# systemctl enable php-fpm          //设置开机启动
+二、构建LNMP平台
+[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
+ location  ~  \.php$  {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;    #将请求转发给本机9000端口，PHP解释器
+            fastcgi_index  index.php;
+            #fastcgi_param   SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+            include        fastcgi.conf;       #加载其他配置文件
+        }
+[root@proxy ~]# /usr/local/nginx/sbin/nginx -s reload
+[root@proxy ~]# vim /usr/local/nginx/html/test.php
+<?php
+$i="This is a test Page";
+echo $i;
+?>
+[root@proxy ~]# vim /usr/local/nginx/html/mysql.php
+.......
+[root@client ~]# firefox http://192.168.4.5/test.php
+[root@client ~]# firefox http://192.168.4.5/mysql.php
+
+Nginx的默认访问日志文件为/usr/local/nginx/logs/access.log
+Nginx的默认错误日志文件为/usr/local/nginx/logs/error.log
+PHP默认错误日志文件为/var/log/php-fpm/www-error.log
+
+三、地址重写
+1.[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf  //访问a.html重定向到b.html（跳转地址栏）
+    .. ..
+    server {
+            listen       80;
+            server_name  localhost;
+    rewrite /a.html  /b.html redirct;            
+    location / {
+        root   html;
+    index  index.html index.htm;
+    }
+    }
+[root@proxy ~]# echo "BB" > /usr/local/nginx/html/b.html
+[root@proxy ~]# /usr/local/nginx/sbin/nginx  -s  reload
+
+2.[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf    //访问192.168.4.5的请求重定向至www.tmooc.cn
+    .. ..
+    server {
+            listen       80;
+            server_name  localhost;
+    rewrite ^/  http://www.tmooc.cn/;
+    location / {
+        root   html;
+    index  index.html index.htm;
+    # rewrite /a.html  /b.html  redirect;
+    }
+    }
+3.[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf  //访问192.168.4.5/下面子页面，重定向至www.tmooc.cn/下相同的页面
+    .. ..
+    server {
+            listen       80;
+            server_name  localhost;
+    rewrite ^/(.*)$  http://www.tmooc.cn/$1;
+    location / {
+        root   html;
+    index  index.html index.htm;
+    }
+    }
+[root@proxy ~]# echo "I am Normal page" > /usr/local/nginx/html/test.html
+[root@proxy ~]# mkdir  -p  /usr/local/nginx/html/firefox/
+[root@proxy ~]# echo "firefox page" > /usr/local/nginx/html/firefox/test.htm
+[root@proxy ~]# vim /usr/local/nginx/conf/nginx.conf
+    .. ..
+    server {
+            listen       80;
+            server_name  localhost;
+    location / {
+        root   html;
+    index  index.html index.htm;
+    }
+    #这里，~符号代表正则匹配，*符号代表不区分大小写
+    if ($http_user_agent ~* firefox) {            //识别客户端firefox浏览器
+    rewrite ^(.*)$  /firefox/$1;
+    }
+    }
+
+地址重写格式【总结】
+rewrite 旧地址 新地址 [选项];
+last 不再读其他rewrite
+break 不再读其他语句，结束请求
+redirect 临时重定向
+permament 永久重定向
