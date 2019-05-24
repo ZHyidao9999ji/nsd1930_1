@@ -1,0 +1,183 @@
+案例1：Git基本操作
+1.部署Git服务器（192.168.2.100作为远程git服务器）
+[root@web1 ~]# yum -y install git
+[root@web1 ~]# mkdir /var/git
+[root@web1 ~]# git init /var/git/project --bare 
+2.客户端测试(192.168.2.200作为客户端主机)
+[root@web2 ~]# yum -y install git
+[root@web2 ~]# git clone root@192.168.2.100:/var/git/project 
+[root@web2 ~]# cd project
+[root@web2 project]# git config --global user.email "you@example.com"
+[root@web2 project]# git config --global user.name "Your Name"
+[root@web2 project]# echo "init date" > init.txt
+[root@web2 project]# git add .
+[root@web2 project]# git commit  -m  "注释，可以为任意字符"
+[root@web2 project]# git config --global push.default simple
+[root@web2 project]# git push
+root@192.168.2.100's password:  输入服务器root密码
+
+查看版本日志
+[root@web2 project]# git log --oneline
+[root@web2 project]# git reflog
+案例2： HEAD指针操作
+[root@web2 project]# git log --oneline
+04ddc0f num.txt:789
+7bba57b num.txt:456
+301c090 num.txt:123
+b427164 new.txt:third
+0584949 new.txt:second
+ece2dfd new.txt:first line
+e1112ac add new.txt
+1a0d908 初始化
+
+[root@web2 project]# git reset --hard 301c0
+[root@web2 project]# git reflog
+301c090 HEAD@{0}: reset: moving to 301c0
+04ddc0f HEAD@{1}: commit: num.txt:789
+7bba57b HEAD@{2}: commit: num.txt:456
+301c090 HEAD@{3}: commit: num.txt:123
+b427164 HEAD@{5}: commit: new.txt:third
+0584949 HEAD@{6}: commit: new.txt:second
+ece2dfd HEAD@{7}: commit: new.txt:first line
+e1112ac HEAD@{8}: commit: add new.txt
+1a0d908 HEAD@{9}: commit (initial): 初始化
+[root@web2 project]# git reset --hard 7bba57b
+[root@web2 project]# git reflog                #查看指针移动历史
+7bba57b HEAD@{0}: reset: moving to 7bba57b
+301c090 HEAD@{1}: reset: moving to 301c0
+… …
+[root@web2 project]# git reset --hard 04ddc0f    #恢复num.txt的所有数据
+
+案例3：Git分支操作
+常见的分支规范如下：
+MASTER分支（MASTER是主分支，是代码的核心）。
+DEVELOP分支（DEVELOP最新开发成果的分支）。
+RELEASE分支（为发布新产品设置的分支）。
+HOTFIX分支（为了修复软件BUG缺陷的分支）。
+FEATURE分支（为开发新功能设置的分支）。
+1.查看并创建分支
+[root@web2 project]# git branch -v
+* master 0dc2b76 delete init.txt
+[root@web2 project]# git branch hotfix
+[root@web2 project]# git branch feature
+[root@web2 project]# git branch -v
+feature 0dc2b76 delete init.txt
+hotfix  0dc2b76 delete init.txt
+* master  0dc2b76 delete init.txt
+2.切换与合并分支
+[root@web2 project]# git checkout hotfix
+[root@web2 project]# git branch -v
+feature 0dc2b76 delete init.txt
+* hotfix  0dc2b76 delete init.txt
+master  0dc2b76 delete init.txt
+[root@web2 project]# echo "fix a bug" >> new.txt
+[root@web2 project]# git add .
+[root@web2 project]# git commit -m "fix a bug"
+[root@web2 project]# git checkout master
+[root@web2 project]# cat new.txt        #默认master分支中没有hotfix分支中的数据
+[root@web2 project]# git merge hotfix
+Updating 0dc2b76..5b4a755
+Fast-forward
+new.txt | 1 ++
+1 file changed, 1 insertions(+)
+[root@web2 project]# git push
+2.解决版本分支的冲突问题
+[root@web2 project]# git checkout hotfix
+[root@web2 project]# echo "AAA" > a.txt
+[root@web2 project]# git add .
+[root@web2 project]# git commit -m "add a.txt by hotfix"
+[root@web2 project]# echo "BBB" > a.txt
+[root@web2 project]# git add .
+[root@web2 project]# git commit -m "add a.txt by master"
+[root@web2 project]# cat a.txt                #该文件中包含有冲突的内容
+<<<<<<< HEAD
+BBB
+=======
+AAA
+>>>>>>> hotfix
+[root@web2 project]# vim a.txt              #修改该文件，为最终需要的数据，解决冲突
+BBB
+[root@web2 project]# git add .
+[root@web2 project]# git commit -m "resolved"
+案例4：Git服务器
+创建SSH协议服务器
+创建Git协议服务器
+创建HTTP协议服务器
+1.SSH协议服务器（支持读写操作）
+[root@web1 ~]# git init --bare /var/git/base_ssh
+[root@web2 ~]# git clone root@192.168.2.100:/var/git/base_ssh
+[root@web2 ~]# rm -rf base_ssh
+[root@web2 ~]# ssh-keygen -f /root/.ssh/id_rsa -N ''
+[root@web2 ~]# ssh-copy-id  192.168.2.100
+[root@web2 ~]# git clone root@192.168.2.100:/var/git
+[root@web2 ~]# git push
+2.Git协议服务器（只读操作的服务器）
+[root@web1 ~]# yum -y install git-daemon
+[root@web1 ~]# git init --bare /var/git/base_git
+[root@web1 ~]# vim /usr/lib/systemd/system/git@.service
+    修改前内容如下：
+    ExecStart=-/usr/libexec/git-core/git-daemon --base-path=/var/lib/git 
+    --export-all --user-path=public_git --syslog --inetd –verbose
+    修改后内容如下：
+    ExecStart=-/usr/libexec/git-core/git-daemon --base-path=/var/git 
+    --export-all --user-path=public_git --syslog --inetd –verbose
+[root@web1 ~]# systemctl  start  git.socket
+[root@web2 ~]# git clone git://192.168.2.100/base_git
+3.HTTP协议服务器（只读操作的服务器）
+[root@web1 ~]# yum -y install httpd gitweb
+[root@web1 ~]# vim +11 /etc/gitweb.conf 
+$projectroot = "/var/git";                        #添加一行
+[root@web1 ~]# git init --bare /var/git/base_http
+[root@web1 ~]# systemctl start httpd
+[root@web2 ~]# firefox http://192.168.2.100/git/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
