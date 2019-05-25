@@ -131,7 +131,41 @@ $projectroot = "/var/git";                        #添加一行
 [root@web1 ~]# systemctl start httpd
 [root@web2 ~]# firefox http://192.168.2.100/git/
 
+案例五 : 制作nginx的RPM包(自定义安装)
+RPM(压缩包,可手动解压)
+先源码安装一遍 ,用命令将/usr/local/nginx打包 (*.rpm),实现 yum 安装  (源码--->rpm--->yum)
+[root@web1 ~]# yum -y install rpm-build   //rpm包制作工具
+[root@web1 ~]# rpmbuild  -ba xxx.spec    //利用报错自动生成以下目录
+[root@web1 ~]# ls rpmbuild                //压缩包在RPMS里,配置文件在SPECS里,源码包在SOURCES里　　　
+BUILD  BUILDROOT  RPMS  SOURCES  SPECS  SRPMS   
+[root@web1 ~]# cp /root/lnmp_soft/nginx-1.12.2.tar.gz   /root/rpmbuild/SOURCES/ 
+[root@web1 ~]# vim /root/rpmbuild/SPECS/nginx.spec   
+Name:nginx                                        #源码包软件名称
+Version:1.12.2                                    #源码包软件的版本号
+Release: 10                                        #制作的RPM包版本号
+Summary: Nginx is a web server software.            #RPM软件的概述    
+License:  GPL                                        #GPL:开源协议(任意复制、修改、发布) 具有继承性
+URL: www.test.com                                    #网址
+Source0:nginx-1.12.2.tar.gz                        #源码包文件的全称
+#BuildRequires:                                    #制作RPM时的依赖关系
+#Requires:                                        #安装RPM时的依赖关系
+%description
+nginx [engine x] is an HTTP and reverse proxy server.    #软件的详细描述
+%post
+useradd nginx                               #非必需操作：安装后脚本(创建账户)
+%prep
+%setup -q                                #自动解压源码包，并cd进入目录
+%build
+./configure
+make %{?_smp_mflags}
+%install
+make install DESTDIR=%{buildroot}
+%files
+%doc
+/usr/local/nginx/*                    #对哪些文件与目录打包
 
+%changelog
+[root@web1 ~]# rpmbuild -ba nginx.spec 
 
 
 
