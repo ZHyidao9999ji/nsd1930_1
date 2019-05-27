@@ -4,11 +4,15 @@
 高性能计算集群HPC：通过以集群开发的并行应用程序，解决复杂的科学问题。
 负载均衡（LB）集群：客户端访问负载可以在计算机集群中尽可能平均地分摊处理。
 高可用（HA）集群：当集群中的一个系统发生故障时，集群软件迅速做出反应，将该系统的任务分配到集群中其它正在工作的系统上执行。
-3.LVS工作模式 :
+
+3.性能 : nginx < LVS
+   功能 : nginx > LVS
+
+4.LVS工作模式 :
 NAT：通过网络地址转换实现的虚拟服务器。Director将用户请求报文的目的地址改成选定的Real Server地址后，转发给Real Server。大并发访问时，调度器的性能成为瓶颈
 DR：直接使用路由技术实现虚拟服务器。通过改写请求报文的MAC地址，将请求发至Real Server，Real Server直接响应客户端
 TUN：通过隧道方式实现虚拟服务器。Director采用隧道技术将请求发至Real Server后，Real Server直接响应客户端
-4.LVS负载平衡的调度算法
+5.LVS负载平衡的调度算法
 轮询（Round Robin） rr
 加权轮询（Weighted Round Robin） wrr
 最少连接（Least Connections） lc
