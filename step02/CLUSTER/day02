@@ -150,11 +150,11 @@ listen stats 0.0.0.0:1080   #监听端口
     stats realm Haproxy Manager #进入管理解面查看状态信息
     stats auth admin:admin  #统计页面用户名和密码设置
   #stats hide-version   #隐藏统计页面上HAProxy的版本信息
-listen  websrv-rewrite 0.0.0.0:80
+listen  webs 0.0.0.0:80
    balance roundrobin
    server  web1 192.168.2.100:80 check inter 2000 rise 2 fall 5
    server  web2 192.168.2.200:80 check inter 2000 rise 2 fall 5
-
+用客户机client测试192.168.4.5 , 和192.168.4.5:1080/stats调度服务器
 
 
 
